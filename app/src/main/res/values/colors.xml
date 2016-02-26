@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- default -->
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+
+    <!-- custom -->
+    <color name="color_primary">#2196f3</color>
+    <color name="color_primary_dark">#1976d2</color>
+
+    <!--
+    <color name="color_primary">#FC7734</color>
+    <color name="color_primary_dark">#FC7734</color>
+    -->
+</resources>
