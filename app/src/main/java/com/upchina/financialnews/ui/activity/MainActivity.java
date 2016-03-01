@@ -3,7 +3,6 @@ package com.upchina.financialnews.ui.activity;
 import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -15,24 +14,25 @@ import com.upchina.financialnews.bean.Topic;
 import com.upchina.financialnews.net.UpChinaRestClient;
 import com.upchina.financialnews.support.Constants;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 import cz.msebera.android.httpclient.Header;
+import me.khrystal.widget.KRecyclerView;
 
 
 public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnRefreshListener {
 
     private SwipeRefreshLayout mSwipeRefreshLayout;
-    private RecyclerView mRecyclerView;
+    private KRecyclerView krecyclerView;
 
     private List<News> newsList = new ArrayList<News>();
     private NewsAdapter mAdapter;
     private boolean isRefreshed = false;
-    private Integer maxScore = 0;
+    private String maxScore = "0";
     private Integer pageSize = 10;
 
     @Override
@@ -46,17 +46,25 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     }
 
     private void initView() {
-        mRecyclerView = (RecyclerView) findViewById(R.id.news_list);
-        mRecyclerView.setHasFixedSize(true);
-
-        // 设置布局管理器
-        LinearLayoutManager layout = new LinearLayoutManager(this);
-        layout.setOrientation(LinearLayoutManager.VERTICAL);
-        mRecyclerView.setLayoutManager(layout);
+        krecyclerView = (KRecyclerView) findViewById(R.id.news_list);
 
         // 设置Adapter
         mAdapter = new NewsAdapter(newsList);
-        mRecyclerView.setAdapter(mAdapter);
+        krecyclerView.setAdapter(mAdapter, 1, LinearLayoutManager.VERTICAL);
+        krecyclerView.setLoadDataLintener(new KRecyclerView.LoadDataListener() {
+            @Override
+            public void loadData(int page) {
+                MainActivity.this.loadData();
+            }
+        });
+        //make KRecyclerView know how many items in a page
+        krecyclerView.setItemCount(10);
+        //make KRecyclerView know loaddata need to judge network can available
+        //Notice when isUseByNetWork(true) and network can't available
+        //the loading footer can click to load more again
+        //krecyclerView.isUseByNetWork(true);
+        krecyclerView.mPtrFrameLayout.setEnabled(false);
+        krecyclerView.enableLoadMore();
 
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
         // 设置手势滑动监听器
@@ -69,17 +77,17 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     @Override
     protected void onResume() {
         super.onResume();
-
+        maxScore = "0";
         refreshIf(!isRefreshed);
     }
 
     private void refreshIf(boolean prerequisite) {
         if (prerequisite) {
-            doRefresh();
+            loadData();
         }
     }
 
-    private void doRefresh() {
+    private void loadData() {
 
         String url = Constants.Url.TOPIC_RECOMMEND + maxScore + "/" + pageSize;
         UpChinaRestClient.get(url, null, new JsonHttpResponseHandler() {
@@ -89,7 +97,22 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
                 Topic topic = gson.fromJson(response.toString(), Topic.class);
                 List<News> list = topic.getList();
                 if (list != null && list.size() > 0) {
-                    mAdapter.updateNewsListAndNotify(list);
+                    if (maxScore.equals("0")) { // 第一页
+                        mAdapter.updateNewsListAndNotify(list);
+                    } else {
+                        mAdapter.addNewsListAndNofity(list);
+                    }
+                    if (list.size() < pageSize) {
+                        krecyclerView.cantLoadMore();
+                    } else {
+                        krecyclerView.enableLoadMore();
+                        News news = list.get(pageSize - 1);
+                        double a =  Double.parseDouble(news.getPriority()) * 1000000;
+                        BigDecimal bigDecimal = new BigDecimal(a);
+                        maxScore = bigDecimal.toString();
+                    }
+                } else {
+                    krecyclerView.cantLoadMore();
                 }
             }
 
@@ -120,6 +143,7 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
 
     @Override
     public void onRefresh() {
-        doRefresh();
+        maxScore = "0";
+        loadData();
     }
 }
