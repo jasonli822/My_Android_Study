@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
@@ -24,6 +25,7 @@ import com.upchina.financialnews.R;
 import com.upchina.financialnews.bean.News;
 import com.upchina.financialnews.support.Check;
 import com.upchina.financialnews.support.Constants;
+import com.upchina.financialnews.ui.activity.NewsDetailActivity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -125,15 +127,22 @@ public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.CardViewHolder
         final News news = newsList.get(position);
         String newsDetailUrl = Constants.Url.TOPIC_RECOMMEND_DETAIL + news.getId() + Constants.Url.TOPIC_SUFFIX;
         if (browse) {
-            showNewsDetail(context, newsDetailUrl);
+            showNewsDetail(context, position, newsDetailUrl);
         } else {
             String subject = news.getSubject();
             share(context, subject, newsDetailUrl);
         }
     }
 
-    private void showNewsDetail(Context context, String url) {
-        openUsingBrowser(context, url);
+    private void showNewsDetail(Context context, int position, String url) {
+        //openUsingBrowser(context, url);
+        Intent intent = new Intent(context, NewsDetailActivity.class);
+        // 使用Bundle携带数据
+        Bundle bundle = new Bundle();
+        bundle.putString("url", url);
+        bundle.putSerializable("news", newsList.get(position));
+        intent.putExtras(bundle);
+        context.startActivity(intent);
     }
 
     private void openUsingBrowser(Context context, String url) {

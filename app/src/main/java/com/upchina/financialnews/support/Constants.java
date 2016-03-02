@@ -14,7 +14,8 @@ public class Constants {
         public static final String TOPIC_RECOMMEND_UPLOAD_IMAGE = BASE_UPLOAD_IMAGE_URL + "recommend";
 
         // 要闻详细页，示例url:http://www.upchina.com/topic_detail-12438.html
-        public static final String TOPIC_RECOMMEND_DETAIL = BASE_URL + "topic_detail-";
+        //public static final String TOPIC_RECOMMEND_DETAIL = BASE_URL + "topic_detail-";
+        public static final String TOPIC_RECOMMEND_DETAIL = BASE_URL + "topics/";
         public static final String TOPIC_SUFFIX = ".html";
     }
 }

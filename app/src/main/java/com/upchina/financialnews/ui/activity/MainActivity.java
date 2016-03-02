@@ -77,7 +77,6 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     @Override
     protected void onResume() {
         super.onResume();
-        maxScore = "0";
         refreshIf(!isRefreshed);
     }
 

@@ -5,4 +5,6 @@
     <string name="no_browser"><![CDATA[您没有安装浏览器呢~ >_<]]></string>
     <string name="share_to">分享至…</string>
     <string name="network_error">网络错误！</string>
+    <string name="no_news">没有新闻</string>
+    <string name="load_fail">加载失败,请重试</string>
 </resources>

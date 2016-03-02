@@ -13,4 +13,6 @@
     <color name="color_primary">#FC7734</color>
     <color name="color_primary_dark">#FC7734</color>
     -->
+
+    <color name="color_source">#a1ffffff</color>
 </resources>

@@ -2,7 +2,9 @@ package com.upchina.financialnews.bean;
 
 import com.google.gson.annotations.SerializedName;
 
-public class News {
+import java.io.Serializable;
+
+public class News implements Serializable{
 
     @SerializedName("aId")
     private String aId;
