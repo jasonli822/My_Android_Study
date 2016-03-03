@@ -3,6 +3,8 @@ package com.upchina.financialnews.ui.activity;
 import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -28,6 +30,8 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
 
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private KRecyclerView krecyclerView;
+    private TextView mTvLoadEmpty;
+    private TextView mTvLoadError;
 
     private List<News> newsList = new ArrayList<News>();
     private NewsAdapter mAdapter;
@@ -46,6 +50,10 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     }
 
     private void initView() {
+        mTvLoadEmpty = (TextView) findViewById(R.id.tv_load_empty);
+        mTvLoadError = (TextView) findViewById(R.id.tv_load_error);
+
+
         krecyclerView = (KRecyclerView) findViewById(R.id.news_list);
 
         // 设置Adapter
@@ -92,6 +100,9 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
         UpChinaRestClient.get(url, null, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                mTvLoadEmpty.setVisibility(View.GONE);
+                mTvLoadError.setVisibility(View.GONE);
+
                 Gson gson = new Gson();
                 Topic topic = gson.fromJson(response.toString(), Topic.class);
                 List<News> list = topic.getList();
@@ -111,21 +122,37 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
                         maxScore = bigDecimal.toString();
                     }
                 } else {
-                    krecyclerView.cantLoadMore();
+                    if (maxScore.equals("0")) {
+                        krecyclerView.cantLoadMore();
+                    } else {
+                        krecyclerView.enableLoadMore();
+                    }
+
+                    mTvLoadEmpty.setVisibility(View.VISIBLE);
+                    mTvLoadError.setVisibility(View.GONE);
                 }
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
                 Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
+
+                krecyclerView.enableLoadMore();
+
+                if (maxScore.equals("0")){
+                    mTvLoadEmpty.setVisibility(View.GONE);
+                    mTvLoadError.setVisibility(View.VISIBLE);
+                }
             }
 
             @Override
             public void onStart() {
                 super.onStart();
 
-                isRefreshed = false;
-                mSwipeRefreshLayout.setRefreshing(true);
+                if (maxScore.equals("0")) {
+                    mSwipeRefreshLayout.setRefreshing(true);
+                    isRefreshed = false;
+                }
             }
 
             @Override
