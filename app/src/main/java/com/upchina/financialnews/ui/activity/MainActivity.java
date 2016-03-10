@@ -6,24 +6,21 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.gson.Gson;
-import com.loopj.android.http.JsonHttpResponseHandler;
 import com.upchina.financialnews.R;
 import com.upchina.financialnews.adapter.NewsAdapter;
 import com.upchina.financialnews.bean.News;
 import com.upchina.financialnews.bean.Topic;
-import com.upchina.financialnews.net.UpChinaRestClient;
+import com.upchina.financialnews.service.TopicService;
 import com.upchina.financialnews.support.Constants;
-
-import org.json.JSONObject;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-
-import cz.msebera.android.httpclient.Header;
 import me.khrystal.widget.KRecyclerView;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 
 public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnRefreshListener {
@@ -37,7 +34,7 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     private NewsAdapter mAdapter;
     private boolean isRefreshed = false;
     private String maxScore = "0";
-    private Integer pageSize = 10;
+    private int pageSize = 10;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,76 +93,77 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
 
     private void loadData() {
 
-        String url = Constants.Url.TOPIC_RECOMMEND + maxScore + "/" + pageSize;
-        UpChinaRestClient.get(url, null, new JsonHttpResponseHandler() {
+        if (maxScore.equals("0")) {
+            mSwipeRefreshLayout.setRefreshing(true);
+            isRefreshed = false;
+        }
+
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(Constants.Url.TOPIC_RECOMMEND)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        TopicService newsService = retrofit.create(TopicService.class);
+
+        Call<Topic> call = newsService.getTopicRecommend(maxScore, pageSize);
+        call.enqueue(new Callback<Topic>() {
+
             @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                mTvLoadEmpty.setVisibility(View.GONE);
-                mTvLoadError.setVisibility(View.GONE);
+            public void onResponse(Call<Topic> call, Response<Topic> response) {
+                isRefreshed = true;
+                mSwipeRefreshLayout.setRefreshing(false);
 
-                Gson gson = new Gson();
-                Topic topic = gson.fromJson(response.toString(), Topic.class);
-                List<News> list = topic.getList();
-                if (list != null && list.size() > 0) {
-                    if (maxScore.equals("0")) { // 第一页
-                        mAdapter.updateNewsListAndNotify(list);
-                    } else {
-                        mAdapter.addNewsListAndNofity(list);
-                    }
-                    if (list.size() < pageSize) {
-                        krecyclerView.cantLoadMore();
-                    } else {
-                        krecyclerView.enableLoadMore();
-                        News news = list.get(pageSize - 1);
-                        double a =  Double.parseDouble(news.getPriority()) * 1000000;
-                        BigDecimal bigDecimal = new BigDecimal(a);
-                        maxScore = bigDecimal.toString();
-                    }
-                } else {
-                    if (maxScore.equals("0")) {
-                        krecyclerView.cantLoadMore();
-                    } else {
-                        krecyclerView.enableLoadMore();
-                    }
-
-                    mTvLoadEmpty.setVisibility(View.VISIBLE);
+                int statusCode = response.code();
+                if (statusCode == 200) {
+                    mTvLoadEmpty.setVisibility(View.GONE);
                     mTvLoadError.setVisibility(View.GONE);
+
+                    Topic topic = response.body();
+                    List<News> list = topic.getList();
+                    if (list != null && list.size() > 0) {
+                        if (maxScore.equals("0")) { // 第一页
+                            mAdapter.updateNewsListAndNotify(list);
+                        } else {
+                            mAdapter.addNewsListAndNofity(list);
+                        }
+                        if (list.size() < pageSize) {
+                            krecyclerView.cantLoadMore();
+                        } else {
+                            krecyclerView.enableLoadMore();
+                            News news = list.get(pageSize - 1);
+                            double a = Double.parseDouble(news.getPriority()) * 1000000;
+                            BigDecimal bigDecimal = new BigDecimal(a);
+                            maxScore = bigDecimal.toString();
+                        }
+                    } else {
+                        if (maxScore.equals("0")) {
+                            krecyclerView.cantLoadMore();
+                        } else {
+                            krecyclerView.enableLoadMore();
+                        }
+
+                        mTvLoadEmpty.setVisibility(View.VISIBLE);
+                        mTvLoadError.setVisibility(View.GONE);
+                    }
                 }
             }
 
             @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+            public void onFailure(Call<Topic> call, Throwable t) {
+                isRefreshed = true;
+                mSwipeRefreshLayout.setRefreshing(false);
+
                 Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
 
                 krecyclerView.enableLoadMore();
 
-                if (maxScore.equals("0")){
+                if (maxScore.equals("0")) {
                     mTvLoadEmpty.setVisibility(View.GONE);
                     mTvLoadError.setVisibility(View.VISIBLE);
                 }
             }
-
-            @Override
-            public void onStart() {
-                super.onStart();
-
-                if (maxScore.equals("0")) {
-                    mSwipeRefreshLayout.setRefreshing(true);
-                    isRefreshed = false;
-                }
-            }
-
-            @Override
-            public void onFinish() {
-                super.onFinish();
-
-                isRefreshed = true;
-                mSwipeRefreshLayout.setRefreshing(false);
-            }
         });
-
     }
-
 
     @Override
     public void onRefresh() {
