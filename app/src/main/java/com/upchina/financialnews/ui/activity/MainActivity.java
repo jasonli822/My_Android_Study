@@ -6,21 +6,25 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.upchina.financialnews.R;
 import com.upchina.financialnews.adapter.NewsAdapter;
 import com.upchina.financialnews.bean.News;
 import com.upchina.financialnews.bean.Topic;
 import com.upchina.financialnews.service.TopicService;
 import com.upchina.financialnews.support.Constants;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+
 import me.khrystal.widget.KRecyclerView;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
+import rx.Observer;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 
 
 public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnRefreshListener {
@@ -102,23 +106,40 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(Constants.Url.TOPIC_RECOMMEND)
                 .addConverterFactory(GsonConverterFactory.create())
+                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
                 .build();
         TopicService newsService = retrofit.create(TopicService.class);
 
-        Call<Topic> call = newsService.getTopicRecommend(maxScore, pageSize);
-        call.enqueue(new Callback<Topic>() {
+        newsService.getTopicRecommend(maxScore, pageSize)
+            .subscribeOn(Schedulers.io()) // 指定subscribe发生在IO线程
+            .observeOn(AndroidSchedulers.mainThread()) // 指定 subscriber 的回调发生在主线程
+            .subscribe(new Observer<Topic>() {
+                @Override
+                public void onCompleted() {
+                    isRefreshed = true;
+                    mSwipeRefreshLayout.setRefreshing(false);
+                }
 
-            @Override
-            public void onResponse(Call<Topic> call, Response<Topic> response) {
-                isRefreshed = true;
-                mSwipeRefreshLayout.setRefreshing(false);
+                @Override
+                public void onError(Throwable e) {
+                    isRefreshed = true;
+                    mSwipeRefreshLayout.setRefreshing(false);
 
-                int statusCode = response.code();
-                if (statusCode == 200) {
+                    Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
+
+                    krecyclerView.enableLoadMore();
+
+                    if (maxScore.equals("0")) {
+                        mTvLoadEmpty.setVisibility(View.GONE);
+                        mTvLoadError.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                @Override
+                public void onNext(Topic topic) {
                     mTvLoadEmpty.setVisibility(View.GONE);
                     mTvLoadError.setVisibility(View.GONE);
 
-                    Topic topic = response.body();
                     List<News> list = topic.getList();
                     if (list != null && list.size() > 0) {
                         if (maxScore.equals("0")) { // 第一页
@@ -146,23 +167,7 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
                         mTvLoadError.setVisibility(View.GONE);
                     }
                 }
-            }
-
-            @Override
-            public void onFailure(Call<Topic> call, Throwable t) {
-                isRefreshed = true;
-                mSwipeRefreshLayout.setRefreshing(false);
-
-                Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
-
-                krecyclerView.enableLoadMore();
-
-                if (maxScore.equals("0")) {
-                    mTvLoadEmpty.setVisibility(View.GONE);
-                    mTvLoadError.setVisibility(View.VISIBLE);
-                }
-            }
-        });
+            });
     }
 
     @Override
