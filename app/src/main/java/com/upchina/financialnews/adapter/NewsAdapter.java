@@ -32,6 +32,9 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import butterknife.Bind;
+import butterknife.ButterKnife;
+
 public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.CardViewHolder> {
 
     private List<News> newsList;
@@ -165,22 +168,19 @@ public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.CardViewHolder
     }
 
     public static class CardViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-        private ImageView thumbnailImage;
-        private TextView newsSubjectTextView;
-        private TextView newsIntroTextView;
-        private ImageView overflowImage;
+        @Bind(R.id.thumbnail_image) ImageView thumbnailImage;
+        @Bind(R.id.news_subject) TextView newsSubjectTextView;
+        @Bind(R.id.news_intro) TextView newsIntroTextView;
+        @Bind(R.id.card_share_overflow) ImageView overflowImage;
 
         private ClickResponseListener mClickResponseListener;
 
         public CardViewHolder(View itemView, ClickResponseListener clickResponseListener) {
             super(itemView);
 
-            this.mClickResponseListener = clickResponseListener;
+            ButterKnife.bind(this, itemView);
 
-            thumbnailImage = (ImageView) itemView.findViewById(R.id.thumbnail_image);
-            newsSubjectTextView = (TextView) itemView.findViewById(R.id.news_subject);
-            newsIntroTextView = (TextView) itemView.findViewById(R.id.news_intro);
-            overflowImage = (ImageView) itemView.findViewById(R.id.card_share_overflow);
+            this.mClickResponseListener = clickResponseListener;
 
             itemView.setOnClickListener(this);
             overflowImage.setOnClickListener(this);
