@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import butterknife.Bind;
+import butterknife.ButterKnife;
 import me.khrystal.widget.KRecyclerView;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
@@ -29,10 +31,17 @@ import rx.schedulers.Schedulers;
 
 public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnRefreshListener {
 
-    private SwipeRefreshLayout mSwipeRefreshLayout;
-    private KRecyclerView krecyclerView;
-    private TextView mTvLoadEmpty;
-    private TextView mTvLoadError;
+    @Bind(R.id.swipe_refresh_layout)
+    SwipeRefreshLayout mSwipeRefreshLayout;
+
+    @Bind(R.id.news_list)
+    KRecyclerView krecyclerView;
+
+    @Bind(R.id.tv_load_empty)
+    TextView mTvLoadEmpty;
+
+    @Bind(R.id.tv_load_error)
+    TextView mTvLoadError;
 
     private List<News> newsList = new ArrayList<News>();
     private NewsAdapter mAdapter;
@@ -40,22 +49,17 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     private String maxScore = "0";
     private int pageSize = 10;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         layoutResID = R.layout.activity_main;
-
         super.onCreate(savedInstanceState);
 
         initView();
-
     }
 
     private void initView() {
-        mTvLoadEmpty = (TextView) findViewById(R.id.tv_load_empty);
-        mTvLoadError = (TextView) findViewById(R.id.tv_load_error);
-
-
-        krecyclerView = (KRecyclerView) findViewById(R.id.news_list);
+        ButterKnife.bind(MainActivity.this);
 
         // 设置Adapter
         mAdapter = new NewsAdapter(newsList);
@@ -75,13 +79,11 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
         krecyclerView.mPtrFrameLayout.setEnabled(false);
         krecyclerView.enableLoadMore();
 
-        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
         // 设置手势滑动监听器
         mSwipeRefreshLayout.setOnRefreshListener(this);
         // 设置刷新时动画的颜色
         mSwipeRefreshLayout.setColorSchemeResources(R.color.color_primary);
     }
-
 
     @Override
     protected void onResume() {
@@ -111,63 +113,63 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
         TopicService newsService = retrofit.create(TopicService.class);
 
         newsService.getTopicRecommend(maxScore, pageSize)
-            .subscribeOn(Schedulers.io()) // 指定subscribe发生在IO线程
-            .observeOn(AndroidSchedulers.mainThread()) // 指定 subscriber 的回调发生在主线程
-            .subscribe(new Observer<Topic>() {
-                @Override
-                public void onCompleted() {
-                    isRefreshed = true;
-                    mSwipeRefreshLayout.setRefreshing(false);
-                }
-
-                @Override
-                public void onError(Throwable e) {
-                    isRefreshed = true;
-                    mSwipeRefreshLayout.setRefreshing(false);
-
-                    Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
-
-                    krecyclerView.enableLoadMore();
-
-                    if (maxScore.equals("0")) {
-                        mTvLoadEmpty.setVisibility(View.GONE);
-                        mTvLoadError.setVisibility(View.VISIBLE);
+                .subscribeOn(Schedulers.io()) // 指定subscribe发生在IO线程
+                .observeOn(AndroidSchedulers.mainThread()) // 指定 subscriber 的回调发生在主线程
+                .subscribe(new Observer<Topic>() {
+                    @Override
+                    public void onCompleted() {
+                        isRefreshed = true;
+                        mSwipeRefreshLayout.setRefreshing(false);
                     }
-                }
 
-                @Override
-                public void onNext(Topic topic) {
-                    mTvLoadEmpty.setVisibility(View.GONE);
-                    mTvLoadError.setVisibility(View.GONE);
+                    @Override
+                    public void onError(Throwable e) {
+                        isRefreshed = true;
+                        mSwipeRefreshLayout.setRefreshing(false);
 
-                    List<News> list = topic.getList();
-                    if (list != null && list.size() > 0) {
-                        if (maxScore.equals("0")) { // 第一页
-                            mAdapter.updateNewsListAndNotify(list);
-                        } else {
-                            mAdapter.addNewsListAndNofity(list);
-                        }
-                        if (list.size() < pageSize) {
-                            krecyclerView.cantLoadMore();
-                        } else {
-                            krecyclerView.enableLoadMore();
-                            News news = list.get(pageSize - 1);
-                            double a = Double.parseDouble(news.getPriority()) * 1000000;
-                            BigDecimal bigDecimal = new BigDecimal(a);
-                            maxScore = bigDecimal.toString();
-                        }
-                    } else {
+                        Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
+
+                        krecyclerView.enableLoadMore();
+
                         if (maxScore.equals("0")) {
-                            krecyclerView.cantLoadMore();
-                        } else {
-                            krecyclerView.enableLoadMore();
+                            mTvLoadEmpty.setVisibility(View.GONE);
+                            mTvLoadError.setVisibility(View.VISIBLE);
                         }
-
-                        mTvLoadEmpty.setVisibility(View.VISIBLE);
-                        mTvLoadError.setVisibility(View.GONE);
                     }
-                }
-            });
+
+                    @Override
+                    public void onNext(Topic topic) {
+                        mTvLoadEmpty.setVisibility(View.GONE);
+                        mTvLoadError.setVisibility(View.GONE);
+
+                        List<News> list = topic.getList();
+                        if (list != null && list.size() > 0) {
+                            if (maxScore.equals("0")) { // 第一页
+                                mAdapter.updateNewsListAndNotify(list);
+                            } else {
+                                mAdapter.addNewsListAndNofity(list);
+                            }
+                            if (list.size() < pageSize) {
+                                krecyclerView.cantLoadMore();
+                            } else {
+                                krecyclerView.enableLoadMore();
+                                News news = list.get(pageSize - 1);
+                                double a = Double.parseDouble(news.getPriority()) * 1000000;
+                                BigDecimal bigDecimal = new BigDecimal(a);
+                                maxScore = bigDecimal.toString();
+                            }
+                        } else {
+                            if (maxScore.equals("0")) {
+                                krecyclerView.cantLoadMore();
+                            } else {
+                                krecyclerView.enableLoadMore();
+                            }
+
+                            mTvLoadEmpty.setVisibility(View.VISIBLE);
+                            mTvLoadError.setVisibility(View.GONE);
+                        }
+                    }
+                });
     }
 
     @Override
