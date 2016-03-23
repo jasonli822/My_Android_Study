@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.trello.rxlifecycle.ActivityEvent;
 import com.upchina.financialnews.R;
 import com.upchina.financialnews.adapter.NewsAdapter;
 import com.upchina.financialnews.bean.News;
@@ -115,6 +116,7 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
         newsService.getTopicRecommend(maxScore, pageSize)
                 .subscribeOn(Schedulers.io()) // 指定subscribe发生在IO线程
                 .observeOn(AndroidSchedulers.mainThread()) // 指定 subscriber 的回调发生在主线程
+                .compose(this.<Topic>bindUntilEvent(ActivityEvent.PAUSE)) // 当PAUSH时，不再发生事件
                 .subscribe(new Observer<Topic>() {
                     @Override
                     public void onCompleted() {
