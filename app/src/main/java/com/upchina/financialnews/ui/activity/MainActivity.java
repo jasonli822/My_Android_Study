@@ -12,12 +12,17 @@ import com.upchina.financialnews.R;
 import com.upchina.financialnews.adapter.NewsAdapter;
 import com.upchina.financialnews.bean.News;
 import com.upchina.financialnews.bean.Topic;
+import com.upchina.financialnews.inject.component.AppComponent;
+import com.upchina.financialnews.inject.component.DaggerAppComponent;
+import com.upchina.financialnews.inject.module.AppModule;
 import com.upchina.financialnews.service.TopicService;
 import com.upchina.financialnews.support.Constants;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.inject.Inject;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
@@ -32,23 +37,22 @@ import rx.schedulers.Schedulers;
 
 public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnRefreshListener {
 
-    @Bind(R.id.swipe_refresh_layout)
-    SwipeRefreshLayout mSwipeRefreshLayout;
+    @Bind(R.id.swipe_refresh_layout) SwipeRefreshLayout mSwipeRefreshLayout;
 
-    @Bind(R.id.news_list)
-    KRecyclerView krecyclerView;
+    @Bind(R.id.news_list) KRecyclerView krecyclerView;
 
-    @Bind(R.id.tv_load_empty)
-    TextView mTvLoadEmpty;
+    @Bind(R.id.tv_load_empty) TextView mTvLoadEmpty;
 
-    @Bind(R.id.tv_load_error)
-    TextView mTvLoadError;
+    @Bind(R.id.tv_load_error) TextView mTvLoadError;
+
+    @Inject TopicService newsService;
 
     private List<News> newsList = new ArrayList<News>();
     private NewsAdapter mAdapter;
     private boolean isRefreshed = false;
     private String maxScore = "0";
     private int pageSize = 10;
+    private AppComponent appComponent;
 
 
     @Override
@@ -61,6 +65,9 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
 
     private void initView() {
         ButterKnife.bind(MainActivity.this);
+        appComponent = DaggerAppComponent.builder().appModule(new AppModule()).build();
+        appComponent.inject(MainActivity.this);
+
 
         // 设置Adapter
         mAdapter = new NewsAdapter(newsList);
@@ -104,14 +111,6 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
             mSwipeRefreshLayout.setRefreshing(true);
             isRefreshed = false;
         }
-
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(Constants.Url.TOPIC_RECOMMEND)
-                .addConverterFactory(GsonConverterFactory.create())
-                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .build();
-        TopicService newsService = retrofit.create(TopicService.class);
 
         newsService.getTopicRecommend(maxScore, pageSize)
                 .subscribeOn(Schedulers.io()) // 指定subscribe发生在IO线程
