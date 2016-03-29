@@ -8,6 +8,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.trello.rxlifecycle.ActivityEvent;
+import com.upchina.financialnews.DemoApplication;
 import com.upchina.financialnews.R;
 import com.upchina.financialnews.adapter.NewsAdapter;
 import com.upchina.financialnews.bean.News;
@@ -52,7 +53,6 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     private boolean isRefreshed = false;
     private String maxScore = "0";
     private int pageSize = 10;
-    private AppComponent appComponent;
 
 
     @Override
@@ -65,9 +65,7 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
 
     private void initView() {
         ButterKnife.bind(MainActivity.this);
-        appComponent = DaggerAppComponent.builder().appModule(new AppModule()).build();
-        appComponent.inject(MainActivity.this);
-
+        ((DemoApplication) getApplication()).getAppComponent().inject(MainActivity.this);
 
         // 设置Adapter
         mAdapter = new NewsAdapter(newsList);
@@ -177,5 +175,11 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
     public void onRefresh() {
         maxScore = "0";
         loadData();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        ButterKnife.unbind(MainActivity.this);
     }
 }
