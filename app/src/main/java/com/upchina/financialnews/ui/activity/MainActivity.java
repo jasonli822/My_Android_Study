@@ -39,11 +39,8 @@ import rx.schedulers.Schedulers;
 public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnRefreshListener {
 
     @Bind(R.id.swipe_refresh_layout) SwipeRefreshLayout mSwipeRefreshLayout;
-
     @Bind(R.id.news_list) KRecyclerView krecyclerView;
-
     @Bind(R.id.tv_load_empty) TextView mTvLoadEmpty;
-
     @Bind(R.id.tv_load_error) TextView mTvLoadError;
 
     @Inject TopicService newsService;
@@ -60,13 +57,12 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
         layoutResID = R.layout.activity_main;
         super.onCreate(savedInstanceState);
 
-        initView();
+        initUi();
+        initializeDependencyInjector();
     }
 
-    private void initView() {
+    private void initUi() {
         ButterKnife.bind(MainActivity.this);
-        ((DemoApplication) getApplication()).getAppComponent().inject(MainActivity.this);
-
         // 设置Adapter
         mAdapter = new NewsAdapter(newsList);
         krecyclerView.setAdapter(mAdapter, 1, LinearLayoutManager.VERTICAL);
@@ -89,6 +85,10 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
         mSwipeRefreshLayout.setOnRefreshListener(this);
         // 设置刷新时动画的颜色
         mSwipeRefreshLayout.setColorSchemeResources(R.color.color_primary);
+    }
+
+    private void initializeDependencyInjector() {
+        ((DemoApplication) getApplication()).getAppComponent().inject(MainActivity.this);
     }
 
     @Override
@@ -117,58 +117,70 @@ public class MainActivity extends BaseActivity implements SwipeRefreshLayout.OnR
                 .subscribe(new Observer<Topic>() {
                     @Override
                     public void onCompleted() {
-                        isRefreshed = true;
-                        mSwipeRefreshLayout.setRefreshing(false);
+                        onTopicRecommendCompleted();
                     }
 
                     @Override
                     public void onError(Throwable e) {
-                        isRefreshed = true;
-                        mSwipeRefreshLayout.setRefreshing(false);
-
-                        Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
-
-                        krecyclerView.enableLoadMore();
-
-                        if (maxScore.equals("0")) {
-                            mTvLoadEmpty.setVisibility(View.GONE);
-                            mTvLoadError.setVisibility(View.VISIBLE);
-                        }
+                        onTopicRecommendError(e);
                     }
 
                     @Override
                     public void onNext(Topic topic) {
-                        mTvLoadEmpty.setVisibility(View.GONE);
-                        mTvLoadError.setVisibility(View.GONE);
-
-                        List<News> list = topic.getList();
-                        if (list != null && list.size() > 0) {
-                            if (maxScore.equals("0")) { // 第一页
-                                mAdapter.updateNewsListAndNotify(list);
-                            } else {
-                                mAdapter.addNewsListAndNofity(list);
-                            }
-                            if (list.size() < pageSize) {
-                                krecyclerView.cantLoadMore();
-                            } else {
-                                krecyclerView.enableLoadMore();
-                                News news = list.get(pageSize - 1);
-                                double a = Double.parseDouble(news.getPriority()) * 1000000;
-                                BigDecimal bigDecimal = new BigDecimal(a);
-                                maxScore = bigDecimal.toString();
-                            }
-                        } else {
-                            if (maxScore.equals("0")) {
-                                krecyclerView.cantLoadMore();
-                            } else {
-                                krecyclerView.enableLoadMore();
-                            }
-
-                            mTvLoadEmpty.setVisibility(View.VISIBLE);
-                            mTvLoadError.setVisibility(View.GONE);
-                        }
+                        onTopicRecommendReceived(topic);
                     }
                 });
+    }
+
+    private void onTopicRecommendReceived(Topic topic) {
+        mTvLoadEmpty.setVisibility(View.GONE);
+        mTvLoadError.setVisibility(View.GONE);
+
+        List<News> list = topic.getList();
+        if (list != null && list.size() > 0) {
+            if (maxScore.equals("0")) { // 第一页
+                mAdapter.updateNewsListAndNotify(list);
+            } else {
+                mAdapter.addNewsListAndNofity(list);
+            }
+            if (list.size() < pageSize) {
+                krecyclerView.cantLoadMore();
+            } else {
+                krecyclerView.enableLoadMore();
+                News news = list.get(pageSize - 1);
+                double a = Double.parseDouble(news.getPriority()) * 1000000;
+                BigDecimal bigDecimal = new BigDecimal(a);
+                maxScore = bigDecimal.toString();
+            }
+        } else {
+            if (maxScore.equals("0")) {
+                krecyclerView.cantLoadMore();
+            } else {
+                krecyclerView.enableLoadMore();
+            }
+
+            mTvLoadEmpty.setVisibility(View.VISIBLE);
+            mTvLoadError.setVisibility(View.GONE);
+        }
+    }
+
+    private void onTopicRecommendError(Throwable error) {
+        isRefreshed = true;
+        mSwipeRefreshLayout.setRefreshing(false);
+
+        Toast.makeText(getApplicationContext(), getString(R.string.network_error), Toast.LENGTH_SHORT).show();
+
+        krecyclerView.enableLoadMore();
+
+        if (maxScore.equals("0")) {
+            mTvLoadEmpty.setVisibility(View.GONE);
+            mTvLoadError.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void onTopicRecommendCompleted() {
+        isRefreshed = true;
+        mSwipeRefreshLayout.setRefreshing(false);
     }
 
     @Override
